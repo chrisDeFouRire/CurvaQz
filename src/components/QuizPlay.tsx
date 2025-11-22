@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useQuiz } from "../lib/useQuiz";
 import QuizQuestion from "./QuizQuestion";
 import QuizProgress from "./QuizProgress";
@@ -18,10 +17,6 @@ export default function QuizPlay() {
     resetQuiz,
     isAnswered
   } = useQuiz();
-
-  useEffect(() => {
-    generateQuiz();
-  }, [generateQuiz]);
 
   if (quizState === "loading") {
     return (

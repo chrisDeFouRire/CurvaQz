@@ -50,6 +50,13 @@ type NormalizedQuiz = {
   questions: NormalizedQuestion[];
 };
 
+type StoredQuizPayload = {
+  quizId: string;
+  source: QuizMode;
+  metadata?: Record<string, unknown>;
+  questions: NormalizedQuestion[];
+};
+
 const DEFAULT_QUESTION_COUNT = 5;
 const MIN_QUESTION_COUNT = 5;
 const MAX_QUESTION_COUNT = 10;
@@ -152,6 +159,63 @@ function normalizeQuiz(
   };
 }
 
+function toStoredPayload(normalized: NormalizedQuiz): StoredQuizPayload {
+  const { quizId, source, metadata, questions } = normalized;
+  return { quizId, source, metadata, questions };
+}
+
+function parseStoredPayload(payload: unknown): StoredQuizPayload | null {
+  if (!payload || typeof payload !== "object") return null;
+  const base = payload as Record<string, unknown>;
+  if (typeof base.quizId !== "string") return null;
+  if (base.source !== "mock" && base.source !== "live") return null;
+  if (!Array.isArray(base.questions)) return null;
+
+  const questions: NormalizedQuestion[] = [];
+  for (const q of base.questions) {
+    if (!q || typeof q !== "object") return null;
+    const item = q as Record<string, unknown>;
+    if (typeof item.id !== "string" || typeof item.prompt !== "string" || !Array.isArray(item.options)) {
+      return null;
+    }
+    const options: NormalizedOption[] = [];
+    for (const opt of item.options) {
+      if (!opt || typeof opt !== "object") return null;
+      const optItem = opt as Record<string, unknown>;
+      if (typeof optItem.id !== "string" || typeof optItem.text !== "string" || typeof optItem.isCorrect !== "boolean") {
+        return null;
+      }
+      options.push({
+        id: optItem.id,
+        text: optItem.text,
+        isCorrect: optItem.isCorrect
+      });
+    }
+    questions.push({
+      id: item.id,
+      prompt: item.prompt,
+      options
+    });
+  }
+
+  const metadata = base.metadata && typeof base.metadata === "object" ? (base.metadata as Record<string, unknown>) : undefined;
+
+  return {
+    quizId: base.quizId,
+    source: base.source,
+    metadata,
+    questions
+  };
+}
+
+export function buildStoredQuizPayload(normalized: NormalizedQuiz): StoredQuizPayload {
+  return toStoredPayload(normalized);
+}
+
+export function reviveStoredQuizPayload(payload: unknown): StoredQuizPayload | null {
+  return parseStoredPayload(payload);
+}
+
 function resolveQuizMode(env: WorkerEnv): QuizMode {
   return env.QUIZ_MODE === "live" ? "live" : "mock";
 }
@@ -203,6 +267,7 @@ export const handleGenerateQuiz: Handler<{ Bindings: WorkerEnv }> = async (c) =>
     const quizId = crypto.randomUUID();
     const rawQuiz = mode === "mock" ? loadMockQuiz(targetLength) : await loadLiveQuiz(c.env, targetLength);
     const normalized = normalizeQuiz(rawQuiz, targetLength, sessionResult.value.session.id, mode, quizId);
+    const payload = buildStoredQuizPayload(normalized);
 
     await recordQuiz(c.env.DB, {
       id: quizId,
@@ -210,7 +275,8 @@ export const handleGenerateQuiz: Handler<{ Bindings: WorkerEnv }> = async (c) =>
       userId: sessionResult.value.session.user_id,
       source: mode,
       questionCount: normalized.questions.length,
-      metadata: normalized.metadata ?? null
+      metadata: normalized.metadata ?? null,
+      payload
     });
 
     return c.json(normalized);

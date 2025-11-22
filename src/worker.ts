@@ -6,6 +6,7 @@ import {
   handleGetLeaderboardTop,
   handleSubmitScore
 } from "./routes/leaderboard";
+import { handleGetQuiz } from "./routes/quiz-get";
 import type { WorkerEnv } from "./types/worker";
 
 const api = new Hono<{ Bindings: WorkerEnv }>();
@@ -22,6 +23,7 @@ api.get("/health", (c) =>
 api.post("/session/bootstrap", handleSessionBootstrap);
 api.post("/session/refresh", handleSessionRefresh);
 api.post("/quiz/generate", handleGenerateQuiz);
+api.get("/quiz/:quizId", handleGetQuiz);
 api.post("/leaderboard/:quizId/score", handleSubmitScore);
 api.get("/leaderboard/:quizId/top", handleGetLeaderboardTop);
 api.get("/leaderboard/:quizId/me", handleGetLeaderboardMe);

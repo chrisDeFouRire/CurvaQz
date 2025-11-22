@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { QuizResults as QuizResultsType } from "../types/quiz";
 import Leaderboard from "./Leaderboard";
 
@@ -9,6 +10,9 @@ type QuizResultsProps = {
 export default function QuizResults({ results, onPlayAgain }: QuizResultsProps) {
   const { score, totalQuestions, answers, quizData } = results;
   const percentage = Math.round((score / totalQuestions) * 100);
+  const [shareUrl, setShareUrl] = useState("");
+  const [shareStatus, setShareStatus] = useState<"idle" | "sharing" | "shared" | "copied" | "error">("idle");
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
 
   const getPerformanceMessage = () => {
     if (percentage >= 90) return { message: "Outstanding! 🏆", color: "text-emerald-400" };
@@ -18,6 +22,78 @@ export default function QuizResults({ results, onPlayAgain }: QuizResultsProps) 
   };
 
   const performance = getPerformanceMessage();
+  const shareText = useMemo(
+    () => `I scored ${score}/${totalQuestions} on CurvaQz! Can you beat me?`,
+    [score, totalQuestions]
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("quizId", quizData.quizId);
+    const fullUrl = url.toString();
+    setShareUrl(fullUrl);
+    window.history.replaceState({}, "", url);
+  }, [quizData.quizId]);
+
+  const copyLink = useCallback(async () => {
+    if (!shareUrl) {
+      setShareStatus("error");
+      setShareMessage("Share link not ready yet.");
+      return false;
+    }
+    setShareMessage(null);
+    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      setShareStatus("error");
+      setShareMessage("Clipboard not available for copying.");
+      return false;
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareStatus("copied");
+      setShareMessage("Link copied—share it anywhere.");
+      return true;
+    } catch (error) {
+      console.error("share.copy.failed", { error });
+      setShareStatus("error");
+      setShareMessage("Unable to copy the link. Try sharing manually.");
+      return false;
+    }
+  }, [shareUrl]);
+
+  const handleShare = useCallback(async () => {
+    if (!shareUrl) return;
+    setShareStatus("sharing");
+    setShareMessage(null);
+
+    const payload = {
+      title: "CurvaQz — Football Quiz",
+      text: shareText,
+      url: shareUrl
+    };
+
+    const canUseWebShare =
+      typeof navigator !== "undefined" &&
+      typeof navigator.share === "function" &&
+      (typeof navigator.canShare !== "function" || navigator.canShare(payload));
+
+    if (canUseWebShare) {
+      try {
+        await navigator.share(payload);
+        setShareStatus("shared");
+        setShareMessage("Share it with your friends to challenge their score!");
+        return;
+      } catch (error) {
+        console.error("share.native.failed", { error });
+      }
+    }
+
+    const copied = await copyLink();
+    if (!copied) {
+      setShareStatus("error");
+      setShareMessage((prev) => prev ?? "Unable to share right now. Try copying the link manually.");
+    }
+  }, [copyLink, shareText, shareUrl]);
 
   return (
     <div className="space-y-8">
@@ -48,6 +124,53 @@ export default function QuizResults({ results, onPlayAgain }: QuizResultsProps) 
         score={score}
         totalQuestions={totalQuestions}
       />
+
+      <div className="glass rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <div className="text-xs uppercase tracking-[0.3em] text-emerald-300">Share</div>
+            <h3 className="text-lg font-semibold text-slate-100">Challenge your friends</h3>
+            <p className="text-sm text-emerald-100/80">
+              Send this quiz link so they can try to beat your {score}/{totalQuestions} score.
+            </p>
+          </div>
+          <span className="text-xl" aria-hidden>🔗</span>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={handleShare}
+            disabled={shareStatus === "sharing" || !shareUrl}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:shadow-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {shareStatus === "sharing" ? "Sharing..." : "Share quiz"}
+            <span aria-hidden>→</span>
+          </button>
+          <button
+            onClick={copyLink}
+            disabled={!shareUrl}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-400/60 px-4 py-3 text-sm font-semibold text-emerald-200 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Copy link
+          </button>
+        </div>
+
+        <div className="text-xs font-mono text-emerald-200/80 break-all">
+          {shareUrl || "Preparing share link..."}
+        </div>
+
+        {shareMessage && (
+          <div
+            className={`rounded-md px-3 py-2 text-sm ${
+              shareStatus === "error"
+                ? "bg-red-500/10 text-red-100 ring-1 ring-red-500/30"
+                : "bg-emerald-500/10 text-emerald-100 ring-1 ring-emerald-500/30"
+            }`}
+          >
+            {shareMessage}
+          </div>
+        )}
+      </div>
 
       <div className="glass rounded-2xl p-6 space-y-4">
         <h3 className="text-lg font-semibold text-slate-100">Question Breakdown</h3>

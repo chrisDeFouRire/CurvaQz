@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { QuizData, QuizState, QuizAnswer, QuizResults } from "../types/quiz";
 
 export function useQuiz() {
@@ -23,6 +23,31 @@ export function useQuiz() {
 
       if (!response.ok) {
         throw new Error(`Failed to generate quiz: ${response.status}`);
+      }
+
+      const data: QuizData = await response.json();
+      setQuizData(data);
+      setCurrentQuestionIndex(0);
+      setAnswers([]);
+      setQuizState("playing");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(errorMessage);
+      setQuizState("error");
+    }
+  }, []);
+
+  const loadQuizById = useCallback(async (quizId: string) => {
+    setQuizState("loading");
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/quiz/${quizId}`, {
+        credentials: 'same-origin'
+      });
+
+      if (!response.ok) {
+        throw new Error(response.status === 404 ? "Quiz not found" : `Failed to load quiz: ${response.status}`);
       }
 
       const data: QuizData = await response.json();
@@ -85,6 +110,17 @@ export function useQuiz() {
   const isAnswered = (questionId: string) => {
     return answers.some(answer => answer.questionId === questionId);
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const sharedQuizId = params.get("quizId");
+    if (sharedQuizId) {
+      void loadQuizById(sharedQuizId);
+    } else {
+      void generateQuiz();
+    }
+  }, [generateQuiz, loadQuizById]);
 
   return {
     // State

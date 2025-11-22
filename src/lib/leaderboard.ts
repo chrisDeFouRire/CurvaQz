@@ -7,6 +7,7 @@ export type QuizRow = {
   source: QuizMode;
   question_count: number;
   metadata: string | null;
+  payload: string | null;
   created_at: string;
 };
 
@@ -49,15 +50,17 @@ export async function recordQuiz(
     source: QuizMode;
     questionCount: number;
     metadata?: Record<string, unknown> | null;
+    payload?: unknown | null;
   }
 ): Promise<QuizRow> {
   const createdAt = nowIso();
   const metadataJson = quiz.metadata ? JSON.stringify(quiz.metadata) : null;
+  const payloadJson = quiz.payload ? JSON.stringify(quiz.payload) : null;
 
   await db
     .prepare(
-      `INSERT INTO quizzes (id, session_id, user_id, source, question_count, metadata, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO quizzes (id, session_id, user_id, source, question_count, metadata, payload, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       quiz.id,
@@ -66,6 +69,7 @@ export async function recordQuiz(
       quiz.source,
       quiz.questionCount,
       metadataJson,
+      payloadJson,
       createdAt
     )
     .run();
@@ -77,6 +81,7 @@ export async function recordQuiz(
     source: quiz.source,
     question_count: quiz.questionCount,
     metadata: metadataJson,
+    payload: payloadJson,
     created_at: createdAt
   };
 }
@@ -84,7 +89,7 @@ export async function recordQuiz(
 export async function getQuiz(db: D1Database, quizId: string): Promise<QuizRow | null> {
   const quiz = await db
     .prepare(
-      `SELECT id, session_id, user_id, source, question_count, metadata, created_at
+      `SELECT id, session_id, user_id, source, question_count, metadata, payload, created_at
        FROM quizzes
        WHERE id = ?
        LIMIT 1`
