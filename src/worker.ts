@@ -1,47 +1,43 @@
-interface Env {
-  ASSETS?: {
-    fetch: (request: Request) => Promise<Response>;
-  };
-}
+import { Hono } from "hono";
+import { handleSessionBootstrap, handleSessionRefresh } from "./routes/session";
+import type { WorkerEnv } from "./types/worker";
 
-const commonHeaders = {
-  "x-powered-by": "curvaqz-worker"
-};
+const api = new Hono<{ Bindings: WorkerEnv }>();
+
+api.get("/health", (c) =>
+  c.json(
+    {
+      status: "ok",
+      timestamp: Date.now()
+    }
+  )
+);
+
+api.post("/session/bootstrap", handleSessionBootstrap);
+api.post("/session/refresh", handleSessionRefresh);
+
+const app = new Hono<{ Bindings: WorkerEnv }>();
+
+app.route("/api", api);
+
+app.notFound(async (c) => {
+  if (c.req.path.startsWith("/api/")) {
+    return c.json({ error: "Not Found" }, 404);
+  }
+
+  if (c.env.ASSETS) {
+    const assetResponse = await c.env.ASSETS.fetch(c.req.raw);
+    if (assetResponse.status !== 404) {
+      return assetResponse;
+    }
+  }
+
+  return c.text("Not Found", 404);
+});
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
-
-    if (url.pathname === "/api/health") {
-      return Response.json(
-        {
-          status: "ok",
-          timestamp: Date.now()
-        },
-        { headers: commonHeaders }
-      );
-    }
-
-    if (url.pathname.startsWith("/api/")) {
-      return Response.json(
-        { error: "Not Found" },
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-            ...commonHeaders
-          }
-        }
-      );
-    }
-
-    if (env.ASSETS) {
-      const assetResponse = await env.ASSETS.fetch(request);
-      if (assetResponse.status !== 404) {
-        return assetResponse;
-      }
-    }
-
-    return new Response("Not Found", { status: 404, headers: commonHeaders });
-  }
+  fetch: (request: Request, env: WorkerEnv, ctx: ExecutionContext) =>
+    app.fetch(request, env, ctx)
 };
+
+export { app };

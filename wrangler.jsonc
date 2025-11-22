@@ -3,6 +3,13 @@
   "main": "src/worker.ts",
   "compatibility_date": "2024-11-21",
   "tsconfig": "tsconfig.json",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "curvaqz",
+      "database_id": "404ce6d5-9315-42c6-a433-c39e004cafa0"
+    }
+  ],
   "assets": {
     "directory": "./dist"
   }

@@ -63,3 +63,7 @@ Authentication: **Basic Auth** on all endpoints.
   - `nbAnswers` — number of answers per question.
   - `lang` — `fr` | `en` | `es` | `de`.
 - Returns: a quiz for the most recent fixture in the specified league.
+
+## Prompt to have AI enrich it later
+
+I want you to write integration tests for lib/qz-api.ts using curvaQz/docs/qz-api-docs.md to understand what to test. I want you to actually test the API, its return values, infer the types in the responses, and enrich your understanding of the API through this testing. You'll add documentation to the docs/qz-api-docs.md and types to the src/lib/qz-api.ts as you discover them from the actual usage.

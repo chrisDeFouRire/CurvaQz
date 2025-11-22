@@ -41,6 +41,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - Default to TypeScript; 2-space indentation; aim for ≤100–120 column width; avoid unchecked `any`.
 - Favor domain folders (quiz, creator, sharing, ads) and named exports over large index files.
 - Follow Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`). Run formatter/linter before opening a PR (add Prettier/ESLint configs when the codebase exists).
+- Do not add `x-powered-by` headers; keep response headers minimal and privacy-friendly.
 
 ## Testing Guidelines
 
@@ -54,6 +55,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - PRs should: link issues/tasks, summarize user-visible changes, attach screenshots for UI updates, and call out any spec deviations.
 - Update `docs/` when product behavior shifts (especially quiz generation, ads, sharing, or monetisation).
 - Request review for changes touching gameplay logic, data sources, or security-sensitive configuration.
+- When modifying `wrangler.jsonc`, run `npx wrangler types` to refresh `worker-configuration.d.ts` so bindings stay in sync.
 
 ## Security & Configuration
 
