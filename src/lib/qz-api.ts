@@ -2,20 +2,55 @@ const DEFAULT_BASE_URL = "https://clashui.inia.fr/api/quiz/";
 
 type LanguageCode = "fr" | "en" | "es" | "de";
 
+// Inferred types from API integration tests
 export type League = {
   id: string | number;
   name: string;
-  [key: string]: unknown;
+  [key: string]: unknown; // Allow additional fields
 };
 
 export type Team = {
   id: string | number;
   name: string;
+  [key: string]: unknown; // Allow additional fields
+};
+
+export type Fixture = {
+  id: string | number;
+  home_team?: string;
+  away_team?: string;
+  date?: string;
+  league?: string | number;
+  status?: string;
+  score?: string;
+  [key: string]: unknown; // Allow additional fields from API
+};
+
+export type Answer = string | {
+  text?: string;
+  isCorrect?: boolean;
+  correct?: boolean;
   [key: string]: unknown;
 };
 
-export type Fixture = Record<string, unknown>;
-export type QuizResponse = unknown;
+export type Question = {
+  question?: string;
+  prompt?: string;
+  answers?: Answer[];
+  options?: Answer[];
+  correct_answer?: string;
+  incorrect_answers?: string[];
+  correctAnswer?: string;
+  incorrectAnswers?: string[];
+  [key: string]: unknown; // Allow additional fields
+};
+
+export type QuizResponse = {
+  questions?: Question[];
+  fixture?: Fixture;
+  quizId?: string | number;
+  [key: string]: unknown; // Allow additional fields from API
+};
 
 export type QzApiConfig = {
   baseUrl?: string;
