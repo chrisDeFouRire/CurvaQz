@@ -4,32 +4,105 @@ type LanguageCode = "fr" | "en" | "es" | "de";
 
 // Inferred types from API integration tests
 export type League = {
-  id: string | number;
+  id: number;
   name: string;
   [key: string]: unknown; // Allow additional fields
+};
+
+export type TeamInfo = {
+  id: number;
+  name: string;
+  code?: string;
+  country?: string;
+  founded?: number;
+  national?: boolean;
+  logo?: string;
+  [key: string]: unknown;
+};
+
+export type VenueInfo = {
+  id: number;
+  name: string;
+  address?: string;
+  city?: string;
+  capacity?: number;
+  surface?: string;
+  image?: string;
+  [key: string]: unknown;
 };
 
 export type Team = {
-  id: string | number;
-  name: string;
-  [key: string]: unknown; // Allow additional fields
+  team: TeamInfo;
+  venue: VenueInfo;
+  [key: string]: unknown;
+};
+
+export type FixtureInfo = {
+  id: number;
+  referee?: string;
+  timezone?: string;
+  date?: string;
+  timestamp?: number;
+  periods?: {
+    first?: number;
+    second?: number;
+  };
+  venue?: VenueInfo;
+  status?: {
+    long?: string;
+    short?: string;
+    elapsed?: number;
+  };
+  [key: string]: unknown;
 };
 
 export type Fixture = {
-  id: string | number;
-  home_team?: string;
-  away_team?: string;
-  date?: string;
-  league?: string | number;
-  status?: string;
-  score?: string;
-  [key: string]: unknown; // Allow additional fields from API
+  fixture: FixtureInfo;
+  league?: {
+    id?: number;
+    name?: string;
+    country?: string;
+    logo?: string;
+    flag?: string;
+    season?: number;
+    round?: string;
+  };
+  teams?: {
+    home?: TeamInfo;
+    away?: TeamInfo;
+  };
+  goals?: {
+    home?: number;
+    away?: number;
+  };
+  score?: {
+    halftime?: {
+      home?: number;
+      away?: number;
+    };
+    fulltime?: {
+      home?: number;
+      away?: number;
+    };
+    extratime?: {
+      home?: number;
+      away?: number;
+    };
+    penalty?: {
+      home?: number;
+      away?: number;
+    };
+  };
+  [key: string]: unknown;
 };
 
 export type Answer = string | {
   text?: string;
   isCorrect?: boolean;
   correct?: boolean;
+  // Actual API format
+  type?: "OK" | "BAD";
+  txt?: string;
   [key: string]: unknown;
 };
 
@@ -42,14 +115,25 @@ export type Question = {
   incorrect_answers?: string[];
   correctAnswer?: string;
   incorrectAnswers?: string[];
+  // Actual API format - this is what we get from the quiz endpoint
   [key: string]: unknown; // Allow additional fields
 };
 
+// Individual quiz question from API (with numeric key)
+export type QuizQuestion = {
+  question: string;
+  answers: Array<{
+    type: "OK" | "BAD";
+    txt: string;
+  }>;
+  [key: string]: unknown;
+};
+
 export type QuizResponse = {
-  questions?: Question[];
+  // API returns questions as properties with numeric string keys: "0", "1", "2", etc.
+  [key: string]: QuizQuestion | Fixture | undefined;
+  // Special key for fixture data
   fixture?: Fixture;
-  quizId?: string | number;
-  [key: string]: unknown; // Allow additional fields from API
 };
 
 export type QzApiConfig = {
@@ -95,14 +179,14 @@ async function request<T>(
 }
 
 export async function getLeagues(config?: QzApiConfig): Promise<League[]> {
-  return request<League[]>("/leagues", {}, config);
+  return request<League[]>("leagues", {}, config);
 }
 
 export async function getTeams(
   leagueId: string | number,
   config?: QzApiConfig
 ): Promise<Team[]> {
-  return request<Team[]>("/teams", { league: leagueId }, config);
+  return request<Team[]>("teams", { league: leagueId }, config);
 }
 
 export async function getFixtures(
@@ -110,7 +194,7 @@ export async function getFixtures(
   teamId?: string | number,
   config?: QzApiConfig
 ): Promise<Fixture[]> {
-  return request<Fixture[]>("/fixtures", { league: leagueId, team: teamId }, config);
+  return request<Fixture[]>("fixtures", { league: leagueId, team: teamId }, config);
 }
 
 export async function getFixtures50(
@@ -118,7 +202,7 @@ export async function getFixtures50(
   teamId?: string | number,
   config?: QzApiConfig
 ): Promise<Fixture[]> {
-  return request<Fixture[]>("/fixtures_50", { league: leagueId, team: teamId }, config);
+  return request<Fixture[]>("fixtures_50", { league: leagueId, team: teamId }, config);
 }
 
 export type QuizByFixtureParams = {
@@ -143,7 +227,7 @@ export async function getQuizByFixture<T = QuizResponse>(
     lang: params.lang
   };
 
-  return request<T>("/quiz", query, config);
+  return request<T>("quiz", query, config);
 }
 
 export type QuizByLatestParams = {
@@ -168,5 +252,5 @@ export async function getQuizByLatestFixture<T = QuizResponse>(
     lang: params.lang
   };
 
-  return request<T>("/last", query, config);
+  return request<T>("last", query, config);
 }

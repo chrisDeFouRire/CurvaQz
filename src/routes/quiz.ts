@@ -1,5 +1,5 @@
 import type { Handler } from "hono";
-import { getQuizByLatestFixture, type QzApiConfig } from "../lib/qz-api";
+import { getLeagues, getQuizByLatestFixture, type QzApiConfig, type QuizQuestion } from "../lib/qz-api";
 import type { WorkerEnv } from "../types/worker";
 import { ensureSession } from "./session";
 import mockQuiz from "../../mockup/quizz.json";
@@ -217,7 +217,8 @@ export function reviveStoredQuizPayload(payload: unknown): StoredQuizPayload | n
 }
 
 function resolveQuizMode(env: WorkerEnv): QuizMode {
-  return env.QUIZ_MODE === "live" ? "live" : "mock";
+  // Default to live mode now that we have proper API typing
+  return env.QUIZ_MODE === "mock" ? "mock" : "live";
 }
 
 function loadMockQuiz(targetLength: number): RawQuiz {
@@ -226,31 +227,68 @@ function loadMockQuiz(targetLength: number): RawQuiz {
 }
 
 async function loadLiveQuiz(env: WorkerEnv, targetLength: number): Promise<RawQuiz> {
-  const leagueId = env.QUIZ_LEAGUE_ID;
-  if (!leagueId) {
-    throw new Error("QUIZ_LEAGUE_ID is not configured for live quiz mode");
-  }
-
   const config: QzApiConfig = {
     baseUrl: env.QUIZ_API_BASE,
     authToken: env.QUIZ_API_AUTH
   };
 
-  const response = await getQuizByLatestFixture<LiveQuizResponse>(
-    {
-      leagueId,
-      length: clampQuestionCount(targetLength),
-      nbAnswers: 4,
-      distinct: 1,
-      shuffle: 1
-    },
-    config
-  );
+  if (!config.authToken) {
+    throw new Error("QUIZ_API_AUTH is not configured for live quiz mode");
+  }
 
-  const questions = Array.isArray(response.questions) ? response.questions : [];
-  const metadata = response.fixture ? { fixture: response.fixture } : undefined;
+  // Fetch available leagues and pick one randomly
+  const leagues = await getLeagues(config);
+  if (leagues.length === 0) {
+    throw new Error("No leagues available from QZ API");
+  }
 
-  return { questions, metadata };
+  // Try up to 5 random leagues to find one with questions
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const randomLeague = leagues[Math.floor(Math.random() * leagues.length)];
+    const leagueId = randomLeague.id; // Use numeric ID as required by API
+
+    try {
+      const response = await getQuizByLatestFixture<LiveQuizResponse>(
+        {
+          leagueId,
+          length: clampQuestionCount(targetLength),
+          nbAnswers: 4,
+          distinct: true,
+          shuffle: true,
+          lang: "en"
+        },
+        config
+      );
+
+      // API returns questions as object properties with numeric keys: "0", "1", "2", etc.
+      const questions: RawQuestion[] = [];
+      for (const key in response) {
+        if (key !== 'fixture' && response[key] && typeof response[key] === 'object') {
+          const questionData = response[key] as QuizQuestion;
+          if (questionData.question && questionData.answers) {
+            // Convert API format to our internal format
+            const rawQuestion: RawQuestion = {
+              question: questionData.question,
+              answers: questionData.answers.map(answer => ({
+                text: answer.txt,
+                isCorrect: answer.type === 'OK'
+              }))
+            };
+            questions.push(rawQuestion);
+          }
+        }
+      }
+
+      if (questions.length > 0) {
+        const metadata = response.fixture ? { fixture: response.fixture, league: randomLeague } : { league: randomLeague };
+        return { questions, metadata };
+      }
+    } catch (error) {
+      // Continue to next attempt
+    }
+  }
+
+  throw new Error("No leagues returned questions from QZ API after multiple attempts");
 }
 
 export const handleGenerateQuiz: Handler<{ Bindings: WorkerEnv }> = async (c) => {
@@ -265,15 +303,32 @@ export const handleGenerateQuiz: Handler<{ Bindings: WorkerEnv }> = async (c) =>
 
   try {
     const quizId = crypto.randomUUID();
-    const rawQuiz = mode === "mock" ? loadMockQuiz(targetLength) : await loadLiveQuiz(c.env, targetLength);
-    const normalized = normalizeQuiz(rawQuiz, targetLength, sessionResult.value.session.id, mode, quizId);
+    let rawQuiz: RawQuiz;
+    let actualMode = mode;
+
+    if (mode === "live") {
+      try {
+        rawQuiz = await loadLiveQuiz(c.env, targetLength);
+      } catch (liveError) {
+        console.warn("quiz.generate.live_failed", {
+          message: liveError instanceof Error ? liveError.message : String(liveError)
+        });
+        // Fall back to mock if live API fails
+        rawQuiz = loadMockQuiz(targetLength);
+        actualMode = "mock";
+      }
+    } else {
+      rawQuiz = loadMockQuiz(targetLength);
+    }
+
+    const normalized = normalizeQuiz(rawQuiz, targetLength, sessionResult.value.session.id, actualMode, quizId);
     const payload = buildStoredQuizPayload(normalized);
 
     await recordQuiz(c.env.DB, {
       id: quizId,
       sessionId: sessionResult.value.session.id,
       userId: sessionResult.value.session.user_id,
-      source: mode,
+      source: actualMode,
       questionCount: normalized.questions.length,
       metadata: normalized.metadata ?? null,
       payload
@@ -285,7 +340,6 @@ export const handleGenerateQuiz: Handler<{ Bindings: WorkerEnv }> = async (c) =>
       mode,
       message: error instanceof Error ? error.message : String(error)
     });
-    const status = mode === "live" ? 502 : 500;
-    return c.json({ error: "Failed to generate quiz" }, status);
+    return c.json({ error: "Failed to generate quiz" }, 500);
   }
 };

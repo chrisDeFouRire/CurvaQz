@@ -26,6 +26,7 @@ High-level view of the current webapp based on known specs and docs.
 - Base: `https://clashui.inia.fr/api/quiz` with Basic Auth.
 - Key endpoints: `/leagues`, `/teams?league=...`, `/fixtures` (last 10), `/fixtures_50` (last 50), `/quiz` (by fixture), `/last` (latest fixture in league).
 - Quiz parameters include `distinct`, `shuffle`, `length`, `fixture|league`, `nbAnswers`, `lang` (`fr|en|es|de`).
+- League selection: Dynamic - fetches all leagues and randomly selects one for each quiz generation.
 
 ## Product/UX pillars
 

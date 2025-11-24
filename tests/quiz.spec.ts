@@ -79,39 +79,114 @@ describe("quiz generation route", () => {
 
   it("normalizes quizzes from the live API", async () => {
     env.QUIZ_MODE = "live";
-    env.QUIZ_LEAGUE_ID = "league-1";
+    env.QUIZ_API_AUTH = "test-auth";
+    env.QUIZ_API_BASE = "https://clashui.inia.fr/api/quiz/";
     env.QUIZ_LENGTH = "6";
 
+    // Mock response matching real API format: questions in numeric keys "0", "1", etc.
     const liveResponse = {
-      questions: Array.from({ length: 6 }).map((_, index) => ({
-        question: `Live question ${index + 1}`,
-        answers: ["Correct", "Wrong 1", "Wrong 2", "Wrong 3"]
-      })),
-      fixture: { id: "fx-1" }
+      "0": {
+        question: "Live question 1",
+        answers: [
+          { type: "OK", txt: "Correct" },
+          { type: "BAD", txt: "Wrong 1" },
+          { type: "BAD", txt: "Wrong 2" },
+          { type: "BAD", txt: "Wrong 3" }
+        ]
+      },
+      "1": {
+        question: "Live question 2",
+        answers: [
+          { type: "OK", txt: "Correct" },
+          { type: "BAD", txt: "Wrong 1" },
+          { type: "BAD", txt: "Wrong 2" },
+          { type: "BAD", txt: "Wrong 3" }
+        ]
+      },
+      "2": {
+        question: "Live question 3",
+        answers: [
+          { type: "OK", txt: "Correct" },
+          { type: "BAD", txt: "Wrong 1" },
+          { type: "BAD", txt: "Wrong 2" },
+          { type: "BAD", txt: "Wrong 3" }
+        ]
+      },
+      "3": {
+        question: "Live question 4",
+        answers: [
+          { type: "OK", txt: "Correct" },
+          { type: "BAD", txt: "Wrong 1" },
+          { type: "BAD", txt: "Wrong 2" },
+          { type: "BAD", txt: "Wrong 3" }
+        ]
+      },
+      "4": {
+        question: "Live question 5",
+        answers: [
+          { type: "OK", txt: "Correct" },
+          { type: "BAD", txt: "Wrong 1" },
+          { type: "BAD", txt: "Wrong 2" },
+          { type: "BAD", txt: "Wrong 3" }
+        ]
+      },
+      "5": {
+        question: "Live question 6",
+        answers: [
+          { type: "OK", txt: "Correct" },
+          { type: "BAD", txt: "Wrong 1" },
+          { type: "BAD", txt: "Wrong 2" },
+          { type: "BAD", txt: "Wrong 3" }
+        ]
+      },
+      fixture: {
+        fixture: { id: "fx-1", date: "2025-11-23T19:45:00+00:00" },
+        league: { id: 61, name: "Premier League" }
+      }
     };
 
-    global.fetch = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify(liveResponse), { status: 200, headers: { "Content-Type": "application/json" } })
-    ) as unknown as typeof fetch;
+    // Mock getLeagues first, then getQuizByLatestFixture
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([
+          { id: 61, name: "Premier League" }
+        ]), { status: 200, headers: { "Content-Type": "application/json" } })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(liveResponse), { status: 200, headers: { "Content-Type": "application/json" } })
+      ) as unknown as typeof fetch;
 
     const res = await app.fetch(new Request("https://example.com/api/quiz/generate", { method: "POST" }), env);
     expect(res.status).toBe(200);
     const body = await res.json();
 
     expect(body.source).toBe("live");
-    expect(body.metadata.fixture.id).toBe("fx-1");
+    expect(body.metadata.fixture.fixture.id).toBe("fx-1");
+    expect(body.metadata.league.id).toBe(61);
+    expect(body.metadata.league.name).toBe("Premier League");
     expect(body.questions.length).toBe(6);
     expect(body.questions[0].options.some((option: { isCorrect: boolean }) => option.isCorrect)).toBe(true);
   });
 
-  it("returns an error when the upstream quiz call fails", async () => {
+  it("falls back to mock when live API fails", async () => {
     env.QUIZ_MODE = "live";
-    env.QUIZ_LEAGUE_ID = "league-1";
+    env.QUIZ_API_AUTH = "test-auth";
+    env.QUIZ_API_BASE = "https://clashui.inia.fr/api/quiz/";
 
-    global.fetch = vi.fn().mockResolvedValue(new Response("upstream error", { status: 500 })) as unknown as typeof fetch;
+    // Mock getLeagues success, then quiz failure
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([
+          { id: 61, name: "Premier League" }
+        ]), { status: 200, headers: { "Content-Type": "application/json" } })
+      )
+      .mockResolvedValueOnce(
+        new Response("upstream error", { status: 500 })
+      ) as unknown as typeof fetch;
 
     const res = await app.fetch(new Request("https://example.com/api/quiz/generate", { method: "POST" }), env);
-    expect(res.status).toBe(502);
-    expect(await res.json()).toMatchObject({ error: "Failed to generate quiz" });
+    expect(res.status).toBe(200); // Should succeed with fallback
+    const body = await res.json();
+    expect(body.source).toBe("mock"); // Should fall back to mock
   });
 });

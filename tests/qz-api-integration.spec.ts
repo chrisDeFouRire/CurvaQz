@@ -54,9 +54,11 @@ describe("QZ API Integration Tests", () => {
 
       // Infer and validate types
       leagues.forEach((league: League) => {
-        expect(typeof league.id).toBe("string");
+        expect(typeof league.id).toBe("number");
         expect(typeof league.name).toBe("string");
         expect(league.name).toBeTruthy();
+        // Log structure for type inference
+        console.log("League keys:", Object.keys(league));
       });
     });
   });
@@ -75,11 +77,16 @@ describe("QZ API Integration Tests", () => {
 
       expect(Array.isArray(teams)).toBe(true);
 
-      // Infer and validate types
+      // Infer and validate types - API returns {team: {...}, venue: {...}} structure
       teams.forEach((team: Team) => {
-        expect(typeof team.id).toBe("string");
-        expect(typeof team.name).toBe("string");
-        expect(team.name).toBeTruthy();
+        expect(team).toHaveProperty('team');
+        expect(team).toHaveProperty('venue');
+        expect(typeof team.team.id).toBe("number");
+        expect(typeof team.team.name).toBe("string");
+        expect(team.team.name).toBeTruthy();
+        console.log("Team keys:", Object.keys(team));
+        console.log("Team.team keys:", Object.keys(team.team));
+        console.log("Team.venue keys:", Object.keys(team.venue));
       });
     });
   });
@@ -96,11 +103,18 @@ describe("QZ API Integration Tests", () => {
 
       expect(Array.isArray(fixtures)).toBe(true);
 
-      // Infer types from actual response
+      // Infer types from actual response - API returns {fixture: {...}, ...} structure
       fixtures.forEach((fixture: Fixture) => {
-        expect(typeof fixture).toBe("object");
-        // Log structure for type inference
+        expect(fixture).toHaveProperty('fixture');
+        expect(typeof fixture.fixture.id).toBe("number");
         console.log("Fixture keys:", Object.keys(fixture));
+        console.log("Fixture.fixture keys:", Object.keys(fixture.fixture));
+        if (fixture.teams) {
+          console.log("Fixture.teams keys:", Object.keys(fixture.teams));
+        }
+        if (fixture.league) {
+          console.log("Fixture.league keys:", Object.keys(fixture.league));
+        }
       });
     });
 
@@ -138,12 +152,19 @@ describe("QZ API Integration Tests", () => {
 
       expect(typeof quiz).toBe("object");
 
-      // Infer QuizResponse type
+      // Infer QuizResponse type - API returns object with numeric keys for questions
       if (quiz && typeof quiz === "object") {
         console.log("Quiz keys:", Object.keys(quiz));
-        if ("questions" in quiz) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          console.log("Questions sample:", JSON.stringify((quiz as any).questions?.[0], null, 2));
+        // Look for question keys (numeric strings)
+        const questionKeys = Object.keys(quiz).filter(key => key !== 'fixture' && !isNaN(Number(key)));
+        console.log(`Found ${questionKeys.length} question keys:`, questionKeys);
+        if (questionKeys.length > 0) {
+          const firstQuestionKey = questionKeys[0];
+          const firstQuestion = (quiz as any)[firstQuestionKey];
+          console.log("First question sample:", JSON.stringify(firstQuestion, null, 2));
+        }
+        if (quiz.fixture) {
+          console.log("Fixture in quiz response keys:", Object.keys(quiz.fixture));
         }
       }
     });
@@ -180,7 +201,7 @@ describe("QZ API Integration Tests", () => {
         authToken: "invalid"
       };
 
-      await expect(getLeagues(badConfig)).rejects.toThrow(/404/);
+      await expect(getLeagues(badConfig)).rejects.toThrow(/401/);
     });
 
     it("should handle invalid league ID", async () => {

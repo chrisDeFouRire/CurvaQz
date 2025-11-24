@@ -9,7 +9,6 @@ export type WorkerEnv = {
   JWT_AUDIENCE?: string;
   ASSETS?: AssetsBinding;
   QUIZ_MODE?: "mock" | "live";
-  QUIZ_LEAGUE_ID?: string;
   QUIZ_LENGTH?: string;
   QUIZ_API_BASE?: string;
   QUIZ_API_AUTH?: string;

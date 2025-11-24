@@ -14,53 +14,55 @@ Authentication: **Basic Auth** on all endpoints.
   ```json
   [
     {
-      "id": "Premier League",
+      "id": 61,
       "name": "Premier League"
     },
     {
-      "id": "La Liga",
+      "id": 140,
       "name": "La Liga"
     }
   ]
   ```
 - Type: `League[]` where `League = { id: string | number; name: string; [key: string]: unknown }`
+- **Note**: Query parameters must use numeric `id` values, not `name` strings
 
 ## Teams
 
 - **GET** `/teams`
-- Query: `league` (required) — league ID.
+- Query: `league` (required) — league ID (numeric).
 - Returns: teams for the given league.
 - Example response (inferred from integration tests):
   ```json
   [
     {
-      "id": "Manchester City",
+      "id": 77,
       "name": "Manchester City"
     },
     {
-      "id": "Arsenal",
+      "id": 42,
       "name": "Arsenal"
     }
   ]
   ```
 - Type: `Team[]` where `Team = { id: string | number; name: string; [key: string]: unknown }`
+- **Note**: Query parameters must use numeric `id` values, not `name` strings
 
 ## Fixtures (last 10)
 
 - **GET** `/fixtures`
 - Query:
-  - `league` (required) — league ID.
-  - `team` (optional) — filter by team ID.
+  - `league` (required) — league ID (numeric).
+  - `team` (optional) — filter by team ID (numeric).
 - Returns: last 10 fixtures for the league (optionally filtered by team).
 - Example response (inferred from integration tests):
   ```json
   [
     {
-      "id": "fixture-123",
+      "id": 1387809,
       "home_team": "Manchester City",
       "away_team": "Arsenal",
       "date": "2024-11-23T15:00:00Z",
-      "league": "Premier League",
+      "league": 61,
       "status": "finished",
       "score": "2-1"
     }
@@ -72,8 +74,8 @@ Authentication: **Basic Auth** on all endpoints.
 
 - **GET** `/fixtures_50`
 - Query:
-  - `league` (required) — league ID.
-  - `team` (optional) — filter by team ID.
+  - `league` (required) — league ID (numeric).
+  - `team` (optional) — filter by team ID (numeric).
 - Returns: last 50 fixtures for the league (optionally filtered by team).
 - Response format: Same as `/fixtures` but with up to 50 items.
 - Type: `Fixture[]`
@@ -85,7 +87,7 @@ Authentication: **Basic Auth** on all endpoints.
   - `distinct` — `1` for single questions, `0` to allow repeats.
   - `shuffle` — `1` to randomize answer order, `0` to keep first as correct.
   - `length` — desired number of questions.
-  - `fixture` — fixture ID.
+  - `fixture` — fixture ID (numeric).
   - `nbAnswers` — number of answers per question.
   - `lang` — `fr` | `en` | `es` | `de`.
 - Returns: a quiz for the specified fixture.
@@ -100,7 +102,7 @@ Authentication: **Basic Auth** on all endpoints.
       }
     ],
     "fixture": {
-      "id": "fixture-123",
+      "id": 1387809,
       "home_team": "Manchester City",
       "away_team": "Arsenal",
       "date": "2024-11-23T15:00:00Z"
@@ -117,7 +119,7 @@ Authentication: **Basic Auth** on all endpoints.
   - `distinct` — `1` for single questions, `0` to allow repeats.
   - `shuffle` — `1` to randomize answer order, `0` to keep first as correct.
   - `length` — desired number of questions.
-  - `league` — league ID.
+  - `league` — league ID (numeric).
   - `nbAnswers` — number of answers per question.
   - `lang` — `fr` | `en` | `es` | `de`.
 - Returns: a quiz for the most recent fixture in the specified league.
@@ -129,6 +131,17 @@ Authentication: **Basic Auth** on all endpoints.
 - **Basic Auth**: Required for all endpoints
 - **Header**: `Authorization: Basic <base64-encoded-user:password>`
 - **Environment**: Set `QUIZ_API_AUTH` to base64-encoded credentials
+
+## Parameter Requirements
+
+- **IDs vs Names**: All query parameters (`league`, `team`, `fixture`) must use numeric ID values, not string names
+- **Example**: Use `league=61` (ID) instead of `league=Premier%20League` (name)
+- **Data Flow**: First fetch entities via `/leagues`, `/teams`, or `/fixtures` to get valid IDs, then use those IDs in subsequent requests
+
+## League Selection
+
+- **Dynamic**: The application fetches all available leagues and randomly selects one for quiz generation
+- **No Configuration**: `QUIZ_LEAGUE_ID` is not required - league selection happens automatically
 
 ## Error Responses
 
