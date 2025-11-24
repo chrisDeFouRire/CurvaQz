@@ -6,6 +6,7 @@ import QuizResults from "./QuizResults";
 export default function QuizPlay() {
   const {
     quizState,
+    quizData,
     currentQuestion,
     currentQuestionIndex,
     totalQuestions,
@@ -66,7 +67,7 @@ export default function QuizPlay() {
     );
   }
 
-  if (quizState === "playing" && currentQuestion) {
+  if (quizState === "playing" && currentQuestion && quizData) {
     return (
       <div className="min-h-screen py-12 px-6">
         <div className="mx-auto max-w-2xl space-y-8">
@@ -80,6 +81,7 @@ export default function QuizPlay() {
             question={currentQuestion}
             questionNumber={currentQuestionIndex + 1}
             totalQuestions={totalQuestions}
+            quizData={quizData}
             onAnswer={answerQuestion}
             isAnswered={isAnswered(currentQuestion.id)}
           />

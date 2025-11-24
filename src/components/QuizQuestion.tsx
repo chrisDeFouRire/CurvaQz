@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import type { QuizQuestion as QuizQuestionType, QuizAnswer } from "../types/quiz";
+import type { QuizQuestion as QuizQuestionType, QuizAnswer, QuizData } from "../types/quiz";
+import QuizContext from "./QuizContext";
 
 type QuizQuestionProps = {
   question: QuizQuestionType;
   questionNumber: number;
   totalQuestions: number;
+  quizData: QuizData;
   onAnswer: (answer: QuizAnswer) => void;
   isAnswered?: boolean;
 };
@@ -13,6 +15,7 @@ export default function QuizQuestion({
   question,
   questionNumber,
   totalQuestions,
+  quizData,
   onAnswer,
   isAnswered = false
 }: QuizQuestionProps) {
@@ -66,6 +69,8 @@ export default function QuizQuestion({
 
   return (
     <div className="space-y-6">
+      <QuizContext quizData={quizData} />
+
       <div className="text-center">
         <div className="text-sm text-slate-400 mb-2">
           Question {questionNumber} of {totalQuestions}

@@ -279,11 +279,10 @@ export default function QuizResults({ results, onPlayAgain }: QuizResultsProps) 
 
         {shareMessage && (
           <div
-            className={`rounded-md px-3 py-2 text-sm ${
-              shareStatus === "error"
-                ? "bg-red-500/10 text-red-100 ring-1 ring-red-500/30"
-                : "bg-emerald-500/10 text-emerald-100 ring-1 ring-emerald-500/30"
-            }`}
+            className={`rounded-md px-3 py-2 text-sm ${shareStatus === "error"
+              ? "bg-red-500/10 text-red-100 ring-1 ring-red-500/30"
+              : "bg-emerald-500/10 text-emerald-100 ring-1 ring-emerald-500/30"
+              }`}
           >
             {shareMessage}
           </div>
@@ -301,18 +300,16 @@ export default function QuizResults({ results, onPlayAgain }: QuizResultsProps) 
             return (
               <div
                 key={answer.questionId}
-                className={`p-4 rounded-lg border ${
-                  answer.isCorrect
-                    ? "border-emerald-500/30 bg-emerald-500/5"
-                    : "border-red-500/30 bg-red-500/5"
-                }`}
+                className={`p-4 rounded-lg border ${answer.isCorrect
+                  ? "border-emerald-500/30 bg-emerald-500/5"
+                  : "border-red-500/30 bg-red-500/5"
+                  }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-sm font-semibold ${
-                    answer.isCorrect
-                      ? "bg-emerald-500 text-slate-950"
-                      : "bg-red-500 text-white"
-                  }`}>
+                  <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-sm font-semibold ${answer.isCorrect
+                    ? "bg-emerald-500 text-slate-950"
+                    : "bg-red-500 text-white"
+                    }`}>
                     {answer.isCorrect ? "✓" : "✗"}
                   </div>
 
@@ -323,9 +320,8 @@ export default function QuizResults({ results, onPlayAgain }: QuizResultsProps) 
                     <div className="text-slate-100 font-medium mb-2">
                       {question?.prompt}
                     </div>
-                    <div className={`text-sm ${
-                      answer.isCorrect ? "text-emerald-300" : "text-red-300"
-                    }`}>
+                    <div className={`text-sm ${answer.isCorrect ? "text-emerald-300" : "text-red-300"
+                      }`}>
                       Your answer: {selectedOption?.text}
                     </div>
                     {!answer.isCorrect && (

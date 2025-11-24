@@ -36,21 +36,16 @@ export default function QuizProgress({
             return (
               <div
                 key={i}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  isCompleted
-                    ? "bg-emerald-400"
-                    : isCurrent
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${isCompleted
+                  ? "bg-emerald-400"
+                  : isCurrent
                     ? "bg-cyan-400 shadow-[0_0_8px] shadow-cyan-400/50"
                     : "bg-slate-600"
-                }`}
+                  }`}
               />
             );
           })}
         </div>
-      </div>
-
-      <div className="text-center text-sm text-slate-500">
-        {currentQuestion} of {totalQuestions} questions
       </div>
     </div>
   );
