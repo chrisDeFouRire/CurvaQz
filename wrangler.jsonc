@@ -10,13 +10,21 @@
       "database_id": "404ce6d5-9315-42c6-a433-c39e004cafa0"
     }
   ],
+  "kv_namespaces": [
+    {
+      // Replace IDs with your KV namespace identifiers
+      "binding": "QZ_CACHE",
+      "id": "c644c0fa23e5462e834010b81627e980"
+    }
+  ],
   "assets": {
     "directory": "./dist"
   },
   "vars": {
     "QUIZ_MODE": "live",
     "QUIZ_API_BASE": "https://clashui.inia.fr/api/quiz/",
-    "QUIZ_API_AUTH": "ZXh0ZGV2MUA1NTc3bWVkaWEuY29tOmFROE42emY0eDVxUDdY"
+    "QUIZ_API_AUTH": "ZXh0ZGV2MUA1NTc3bWVkaWEuY29tOmFROE42emY0eDVxUDdY",
+    "QZ_API_CACHE_TTL_SECONDS": "3600"
   },
   "observability": {
     "enabled": false,

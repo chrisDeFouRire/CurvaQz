@@ -6,6 +6,13 @@ Authentication: **Basic Auth** on all endpoints.
 
 ---
 
+## Caching
+
+- Leagues and team lists are cached in Cloudflare KV (`QZ_CACHE`) to reduce qz-api calls.
+- Default TTL is **3600 seconds** and can be overridden with `QZ_API_CACHE_TTL_SECONDS`.
+- Cache keys: `qz:leagues` and `qz:teams:<leagueId>`.
+- If the KV binding is unavailable, requests fall back to live API calls.
+
 ## Leagues
 
 - **GET** `/leagues`

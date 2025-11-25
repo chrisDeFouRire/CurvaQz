@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import {
   getLeagues,
   getTeams,
@@ -6,20 +6,26 @@ import {
   getFixtures50,
   getQuizByFixture,
   getQuizByLatestFixture,
-  type QzApiConfig,
   type League,
   type Team,
   type Fixture
 } from "../src/lib/qz-api";
+import type { WorkerEnv } from "../src/types/worker";
 
 // Load environment variables for integration tests
 const QUIZ_API_BASE = process.env.QUIZ_API_BASE || "https://clashui.inia.fr/api/quiz/";
 const QUIZ_API_AUTH = process.env.QUIZ_API_AUTH;
 
-const apiConfig: QzApiConfig = {
-  baseUrl: QUIZ_API_BASE,
-  authToken: QUIZ_API_AUTH
-};
+function createWorkerEnv(overrides?: Partial<WorkerEnv>): WorkerEnv {
+  return {
+    QUIZ_API_BASE,
+    QUIZ_API_AUTH: QUIZ_API_AUTH || "",
+    fetch: global.fetch,
+    ...overrides
+  } as WorkerEnv;
+}
+
+const apiConfig = createWorkerEnv();
 
 // Skip integration tests if auth is not configured
 const shouldRunIntegration = Boolean(QUIZ_API_AUTH);
@@ -196,10 +202,18 @@ describe("QZ API Integration Tests", () => {
 
   describe("Error Handling", () => {
     it("should handle invalid auth", async () => {
-      const badConfig: QzApiConfig = {
-        ...apiConfig,
-        authToken: "invalid"
-      };
+      // Mock fetch to return 401 for invalid auth
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        statusText: "Unauthorized",
+        text: async () => '{"error":"Unauthorized"}'
+      });
+      
+      const badConfig = createWorkerEnv({
+        QUIZ_API_AUTH: "invalid",
+        fetch: mockFetch as unknown as typeof fetch
+      });
 
       await expect(getLeagues(badConfig)).rejects.toThrow(/401/);
     });

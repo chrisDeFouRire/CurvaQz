@@ -16,6 +16,11 @@ CurvaQz is a fast football quiz. Use the scripts below to develop and run it loc
 - `npm run preview` – Preview the production build.
 - `npm run lint` – Static checks via eslint.
 
+## Environment
+
+- Cloudflare KV namespace `QZ_CACHE` caches qz-api league/team lookups (configure IDs in `wrangler.jsonc`).
+- `QZ_API_CACHE_TTL_SECONDS` sets the TTL (in seconds) for that cache, defaulting to `3600`.
+
 ## Notes
 
 - Ensure Wrangler is configured (see `wrangler.jsonc`) for local API testing.

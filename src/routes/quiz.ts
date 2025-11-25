@@ -1,5 +1,5 @@
 import type { Handler } from "hono";
-import { getLeagues, getQuizByLatestFixture, type QzApiConfig, type QuizQuestion } from "../lib/qz-api";
+import { getLeagues, getQuizByLatestFixture, type QuizQuestion } from "../lib/qz-api";
 import type { WorkerEnv } from "../types/worker";
 import { ensureSession } from "./session";
 import mockQuiz from "../../mockup/quizz.json";
@@ -227,17 +227,12 @@ function loadMockQuiz(targetLength: number): RawQuiz {
 }
 
 async function loadLiveQuiz(env: WorkerEnv, targetLength: number): Promise<RawQuiz> {
-  const config: QzApiConfig = {
-    baseUrl: env.QUIZ_API_BASE,
-    authToken: env.QUIZ_API_AUTH
-  };
-
-  if (!config.authToken) {
+  if (!env.QUIZ_API_AUTH) {
     throw new Error("QUIZ_API_AUTH is not configured for live quiz mode");
   }
 
   // Fetch available leagues and pick one randomly
-  const leagues = await getLeagues(config);
+  const leagues = await getLeagues(env);
   if (leagues.length === 0) {
     throw new Error("No leagues available from QZ API");
   }
@@ -257,7 +252,7 @@ async function loadLiveQuiz(env: WorkerEnv, targetLength: number): Promise<RawQu
           shuffle: true,
           lang: "en"
         },
-        config
+        env
       );
 
       // API returns questions as object properties with numeric keys: "0", "1", "2", etc.
@@ -298,7 +293,7 @@ export const handleGenerateQuiz: Handler<{ Bindings: WorkerEnv }> = async (c) =>
     return sessionResult.response;
   }
 
-  const targetLength = clampQuestionCount(c.env.QUIZ_LENGTH);
+  const targetLength = clampQuestionCount((c.env as unknown as Record<string, unknown>).QUIZ_LENGTH as string | number | undefined);
   const mode = resolveQuizMode(c.env);
 
   try {
